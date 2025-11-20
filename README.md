@@ -1,13 +1,40 @@
-# 25fa-dsc180a-team1
-Paper reproduction team 1
+# Sepsis Multimorbidity Analysis
 
-## Getting Started (with Pixi)
+**DSC 180A Quarter 1 Project - Team 1**
 
-### Prerequisites
-- Git
-- Pixi (one-time installation)
+Analysis of sepsis patients with multimorbidities using the MIMIC-III database, including latent class analysis (LCA) and network visualizations.
 
-#### Installing Pixi
+## Table of Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Project Structure](#project-structure)
+- [Running the Analysis](#running-the-analysis)
+- [Reproducibility](#reproducibility)
+- [Development](#development)
+- [Documentation](#documentation)
+
+## Overview
+
+This project analyzes sepsis patients with multimorbidities from the MIMIC-III database. The analysis includes:
+
+- **Data Processing**: Extraction and processing of patient data with comorbidity classifications
+- **Latent Class Analysis (LCA)**: Clustering of patients into subgroups based on multimorbidity patterns
+- **Network Visualizations**: Network graphs showing relationships between comorbidities
+- **Statistical Analysis**: Age-stratified analysis and mortality patterns
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+- **Git** installed
+- **Pixi** package manager installed (see installation instructions below)
+- **PostgreSQL database** with MIMIC-III data loaded
+- **R** installed (for LCA analysis) - version 4.0 or higher recommended
+
+### Installing Pixi
 
 **macOS/Linux:**
 ```bash
@@ -19,146 +46,378 @@ curl -fsSL https://pixi.sh/install.sh | sh
 iwr -useb https://pixi.sh/install.ps1 | iex
 ```
 
-**After installation:**
-- Close and reopen your terminal/PowerShell
-- Verify installation: `pixi --version`
-- On Windows, you may need to restart your computer for PATH changes to take effect
+After installation, restart your terminal or run:
+```bash
+source ~/.bashrc  # or ~/.zshrc on macOS
+```
 
-**Note:** Linux and Windows setup instructions have not been extensively tested. If you encounter issues during setup, please raise a PR or open an issue to help improve the documentation.
+**Verify installation:**
+```bash
+pixi --version
+```
 
-### Setup Instructions
+### Installing R (for LCA Analysis)
 
-1) **Clone the repository**
+**macOS:**
+```bash
+brew install r
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install r-base
+```
+
+**Windows:**
+Download and install from [CRAN](https://cran.r-project.org/bin/windows/base/)
+
+**Required R packages:**
+The R script will automatically install required packages, but you can pre-install them:
+```r
+install.packages(c("poLCA", "dplyr", "readr"))
+```
+
+## Installation
+
+1. **Clone the repository:**
 ```bash
 git clone <REPO_URL>
 cd 25fa-dsc180a-team1
 ```
 
-2) **Create the environment**
+2. **Install dependencies:**
 ```bash
 pixi install
 ```
-- Pixi reads `pixi.toml` + `pixi.lock`, installs Python 3.11 and all dependencies
-- Installs the local package `mimiciii-db` in editable mode
 
-3) **Set up database connection**
+This will install all Python dependencies defined in `pyproject.toml`, including:
+- Database connectors (SQLAlchemy, psycopg)
+- Data analysis libraries (pandas, scikit-learn)
+- Visualization libraries (matplotlib, seaborn, networkx)
+- Jupyter Lab for interactive analysis
 
-**macOS/Linux (bash/zsh):**
+3. **Verify installation:**
 ```bash
-export DATABASE_URL="postgresql://user:password@host:port/database"
+pixi run python --version  # Should show Python 3.11
+pixi run pytest --version   # Verify pytest is available
 ```
 
-**Windows (PowerShell):**
-```powershell
-$env:DATABASE_URL="postgresql://user:password@host:port/database"
-```
+## Configuration
 
-**Windows (Command Prompt):**
-```cmd
-set DATABASE_URL=postgresql://user:password@host:port/database
-```
+### Environment Variables
 
-- Replace with your actual database connection string
-- This environment variable is required for the `mimiciii_db` package to work
-- For persistent configuration, consider using a `.env` file (already supported via `python-dotenv`)
+Create a `.env` file in the project root with the following variables:
 
-**Alternative: Use .env file (recommended for all platforms)**
-
-Create a `.env` file in the project root:
 ```bash
-DATABASE_URL=postgresql://user:password@host:port/database
+# Database Configuration
+DATABASE_URL=postgresql://username:password@host:port/database_name
+
+# Table Names (adjust if using custom table names)
+ADMISSION_COMORBIDITY_TABLE=mimiciii.admission_comorbidity
+TARGET_PATIENT=mimiciii.target_patients
+MORBIDITY_COUNTS_TABLE=mimiciii.morbidity_counts
 ```
 
-This works across all platforms and persists between sessions.
+**Important Notes:**
+- Replace `username`, `password`, `host`, `port`, and `database_name` with your actual database credentials
+- The `DATABASE_URL` should point to your MIMIC-III database
+- Table names should match your database schema (default assumes `mimiciii` schema)
+- Never commit your `.env` file to version control
 
-4) **Sanity check**
+**Example `.env` file:**
 ```bash
-pixi run python -V
-pixi run python -c "import mimiciii_db, sys; print('ok from', mimiciii_db.__file__); print(sys.executable)"
+DATABASE_URL=postgresql://mimic_user:secure_password@localhost:5432/mimic
+ADMISSION_COMORBIDITY_TABLE=mimiciii.admission_comorbidity
+TARGET_PATIENT=mimiciii.target_patients
+MORBIDITY_COUNTS_TABLE=mimiciii.morbidity_counts
 ```
 
-5) **Notebooks (optional)**
-```bash
-pixi run jupyter lab
-```
+### Database Setup
 
-Or create a named kernel:
-```bash
-pixi run python -m ipykernel install --user --name mimiciii-db
-```
-Then select `mimiciii-db` in VS Code/Jupyter.
-
-6) **Common tasks**
-```bash
-pixi run test      # pytest -q
-pixi run lint      # ruff check .
-pixi run fmt       # black .
-```
-
-## Testing
-
-This project includes basic functional tests for the database connection and core functionality. We currently have a few simple tests to verify:
-
-- Database connection works correctly
-- Core tables (patients, admissions) are accessible and have expected structure
-- Basic data retrieval functions properly
-
-**Running tests:**
-```bash
-pixi run test      # Run all tests
-pixi run test-cov  # Run tests with coverage
-```
-
-**Prerequisites:**
-Make sure you have set up your `DATABASE_URL` environment variable (see step 3 above) or created a `.env` file.
-
-**Note:** These are initial tests to verify basic functionality. We will continue to expand the test suite as the project develops.
-
-For detailed testing information, see [tests/README.md](tests/README.md).
-
-7) **Day-to-day usage**
-```bash
-pixi shell                 # open a shell in the environment
-pixi add <pkg>             # add a conda-forge dependency
-pixi add --pypi <pkg>      # add a PyPI dependency
-pixi install               # re-solve after changes
-pixi reinstall --locked    # CI / clean rebuild from lockfile
-```
+Ensure your MIMIC-III database is properly set up with:
+- All required MIMIC-III tables loaded
+- Materialized views created (see `src/mimiciii_db/queries/` for query scripts)
+- Proper schema permissions
 
 ## Project Structure
 
 ```
 25fa-dsc180a-team1/
-├── src/
-│   └── mimiciii_db/
-│       ├── __init__.py
-│       ├── db.py
-│       ├── config.py
-│       └── queries/
-├── tests/
-│   ├── __init__.py
-│   ├── test_db_functional.py
+├── src/                          # Source code modules
+│   ├── mimiciii_db/              # Database utilities and queries
+│   │   ├── db.py                 # Database connection class
+│   │   ├── config.py             # Database configuration
+│   │   └── queries/              # SQL query modules
+│   │       ├── filtered_patients.py
+│   │       ├── elixhauser_quan.py
+│   │       ├── morbidity_counts.py
+│   │       ├── multimorbidity_by_age_bracket_1a.py
+│   │       └── illness_score_queries/  # Severity score calculations
+│   │           ├── 01_echo_data.py
+│   │           ├── 11_sofa.py
+│   │           ├── 12_oasis.py
+│   │           └── ...
+│   ├── mathmatical_analysis/     # Statistical analysis modules
+│   │   ├── lca_clustering.py     # LCA clustering wrapper
+│   │   ├── lca_model_fitting.R   # R script for LCA analysis
+│   │   └── config.py             # Analysis configuration
+│   └── visualizations/           # Visualization modules
+│       ├── network_viz.py        # Network graph visualizations
+│       ├── subgroup_network_viz.py
+│       ├── subgroup_multimorbidity_bubble.py
+│       └── config.py
+├── notebooks/                    # Jupyter analysis notebooks
+│   ├── 1a.ipynb                  # Age-stratified multimorbidity analysis
+│   ├── 1b.ipynb                  # Additional analysis
+│   ├── 1b_Full.ipynb             # Full analysis notebook
+│   └── 4.ipynb                   # Additional visualizations
+├── data/                         # Output data files (generated)
+│   ├── lca_results_summary.csv
+│   ├── lca_all_subgroups.csv
+│   └── lca_best_model_stats.csv
+├── assets/                       # Generated figures and outputs
+│   ├── eda/                      # Exploratory data analysis plots
+│   ├── fig_1/                    # Figure 1 outputs
+│   ├── fig_2/                    # Figure 2 outputs
+│   ├── fig_4/                    # Figure 4 outputs
+│   ├── fig_5/                    # Figure 5 outputs
+│   └── subgroup_multimorbidity_bubble.png
+├── tests/                        # Test suite
+│   ├── test_db_functional.py     # Database functionality tests
 │   └── README.md
-├── notebooks/
-│   └── jason_test.ipynb
-├── assets/
-├── data/
-├── dev_container/
-├── logs/
-├── pyproject.toml             # build config (Setuptools)
-├── pixi.toml                  # project env/tasks config
-├── pixi.lock                  # lockfile for reproducibility
-└── README.md
+├── logs/                         # Log files (generated)
+├── pyproject.toml                # Project configuration and dependencies
+├── pixi.lock                     # Locked dependency versions
+└── README.md                     # This file
 ```
 
-## Usage
+## Running the Analysis
 
-See the [mimiciii_db package documentation](src/mimiciii_db/README.md) for detailed usage examples and API reference.
+### Interactive Analysis with Jupyter
 
-## Troubleshooting
+1. **Start Jupyter Lab:**
+```bash
+pixi run jupyter lab
+```
 
-- **ImportError: mimiciii_db**: Make sure the folder is `src/mimiciii_db/` (three i's) and `pixi install` succeeded.
-- **Version conflict (Python 3.10 vs 3.11)**: Align `requires-python` in `pyproject.toml` with the Python version pinned in `pixi.toml`, then `pixi install`.
-- **Build error when adding editable**: Ensure `pyproject.toml` is present and uses Setuptools with `package-dir` + `packages.find` shown above; remove any stale `*.egg-info`, then `pixi install`.
-- **ModuleNotFoundError: psycopg2**: Make sure both `psycopg` and `psycopg2-binary` are installed. Run `pixi install` to ensure all dependencies are present.
-- **RuntimeError: DATABASE_URL not set**: Set the `DATABASE_URL` environment variable (see step 3) or create a `.env` file in the project root.
+This will open Jupyter Lab in your browser. Navigate to the `notebooks/` directory.
+
+2. **Run notebooks in order:**
+   - Start with `1a.ipynb` for initial data exploration
+   - Continue with `1b.ipynb` or `1b_Full.ipynb` for detailed analysis
+   - Run `4.ipynb` for additional visualizations
+
+3. **Notebook execution:**
+   - Each notebook should be run from top to bottom
+   - Ensure database connection is established before running queries
+   - Check that required data tables exist before executing queries
+
+### Running Individual Components
+
+#### Database Queries
+
+Execute database queries using Python:
+
+```bash
+pixi shell
+python -c "from mimiciii_db import DB; from mimiciii_db.config import db_url; db = DB.from_url(db_url()); print('Connected!')"
+```
+
+#### LCA Analysis
+
+Run the Latent Class Analysis:
+
+```bash
+pixi shell
+python -c "from mathmatical_analysis.lca_clustering import lca_analysis; results = lca_analysis(); print(results)"
+```
+
+Or from Python:
+```python
+from mathmatical_analysis.lca_clustering import lca_analysis
+
+# Run LCA analysis (exports data, runs R script, loads results)
+results = lca_analysis()
+
+# Access results
+print(results['results_summary'])      # Model comparison
+print(results['subgroup_assignments']) # Patient assignments
+print(results['best_model_stats'])     # Best model statistics
+```
+
+#### Visualizations
+
+Generate network visualizations:
+
+```bash
+pixi shell
+python -c "from visualizations.network_viz import *; # Run visualization functions"
+```
+
+### Available Pixi Tasks
+
+Run development and testing tasks:
+
+```bash
+# Run tests
+pixi run test
+
+# Run tests with coverage
+pixi run test-cov
+
+# Lint code
+pixi run lint
+
+# Format code
+pixi run fmt
+
+# Enter interactive shell with environment activated
+pixi shell
+```
+
+## Reproducibility
+
+### Step-by-Step Reproduction Guide
+
+To reproduce the complete analysis:
+
+1. **Set up environment:**
+```bash
+pixi install
+```
+
+2. **Configure database:**
+   - Create `.env` file with database credentials
+   - Ensure MIMIC-III database is accessible
+   - Verify required tables and views exist
+
+3. **Run data preparation queries:**
+   - Execute queries in `src/mimiciii_db/queries/` to create materialized views
+   - Ensure all illness score queries are run in order (01-13)
+
+4. **Execute notebooks in sequence:**
+   - `notebooks/1a.ipynb` - Initial analysis
+   - `notebooks/1b_Full.ipynb` - Full analysis pipeline
+   - `notebooks/4.ipynb` - Visualizations
+
+5. **Verify outputs:**
+   - Check `data/` directory for CSV outputs
+   - Check `assets/` directory for generated figures
+   - Compare outputs with expected results
+
+### Data Dependencies
+
+The analysis requires the following data to be available in the database:
+
+- **Patient demographics**: `mimiciii.patients`, `mimiciii.admissions`
+- **Comorbidity data**: Elixhauser comorbidity classifications
+- **Clinical scores**: SOFA, OASIS, SAPSII (generated by illness score queries)
+- **Vital signs and lab values**: First-day ICU measurements
+
+### Output Files
+
+After running the analysis, you should have:
+
+**Data files (`data/`):**
+- `lca_results_summary.csv` - LCA model comparison results
+- `lca_all_subgroups.csv` - Patient subgroup assignments
+- `lca_best_model_stats.csv` - Best model statistics
+
+**Visualizations (`assets/`):**
+- `eda/` - Exploratory data analysis plots
+- `fig_1/`, `fig_2/`, `fig_4/`, `fig_5/` - Publication figures
+- Network visualizations for each subgroup
+
+### Version Information
+
+- **Python**: 3.11.*
+- **R**: 4.0+ (for LCA analysis)
+- **Key dependencies**: See `pyproject.toml` for complete list
+- **Database**: PostgreSQL with MIMIC-III v1.4
+
+## Development
+
+### Adding New Queries
+
+1. Create a new Python file in `src/mimiciii_db/queries/`
+2. Define query functions that return SQL strings and parameters
+3. Register queries using the `@db.register()` decorator
+4. Document query purpose and output schema
+
+### Adding New Visualizations
+
+1. Create visualization functions in `src/visualizations/`
+2. Use configuration from `visualizations/config.py` for database access
+3. Save outputs to `assets/` directory with descriptive names
+4. Document figure generation in notebook or script
+
+### Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+pixi run test
+
+# Run with coverage report
+pixi run test-cov
+
+# Run specific test file
+pixi shell
+pytest tests/test_db_functional.py -v
+```
+
+### Code Quality
+
+```bash
+# Check code style
+pixi run lint
+
+# Format code
+pixi run fmt
+```
+
+## Documentation
+
+### Additional Resources
+
+- **Module Documentation**: See README files in each `src/` subdirectory
+  - `src/mimiciii_db/README.md` - Database utilities documentation
+  - `src/mimiciii_db/queries/README.md` - Query documentation
+  - `src/mimiciii_db/queries/illness_score_queries/README.md` - Illness score queries
+  - `tests/README.md` - Testing guide
+
+### Troubleshooting
+
+**Database Connection Issues:**
+- Verify `DATABASE_URL` in `.env` is correct
+- Check database is running and accessible
+- Ensure network/firewall allows connection
+- Verify user has necessary permissions
+
+**R Script Execution Errors:**
+- Ensure R is installed and in PATH
+- Check required R packages are installed: `poLCA`, `dplyr`, `readr`
+- Verify R script path is correct: `src/mathmatical_analysis/lca_model_fitting.R`
+
+**Import Errors:**
+- Ensure you're in the Pixi environment: `pixi shell`
+- Verify package is installed: `pixi install`
+- Check Python path includes `src/` directory
+
+**Missing Data Tables:**
+- Run database setup queries in `src/mimiciii_db/queries/`
+- Verify materialized views are created
+- Check table names match `.env` configuration
+
+### Getting Help
+
+For issues or questions:
+1. Check the troubleshooting section above
+2. Review module-specific README files
+3. Check test files for usage examples
+4. Contact the project maintainers
+
+---
+
